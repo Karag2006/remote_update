@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # Constant values
-ComputerListFile='./Computers'
-
+ComputerListFile='./Computers.txt'
+numberOfOptions=5
 
 # function definitions
 readComputerList () {
@@ -23,31 +23,52 @@ then
     while getopts n: flag
     do
         case "${flag}" in
-            n) computername=${OPTARG};;
+            n) computerName=${OPTARG};;
         esac
     done
-    echo "Computername : $computername";
 fi
+
+declare -A computerArray
 
 readComputerList
 
-for computer in ${computers[@]}; do
-    getComputerValues $computer
-    if [ -n "${computername}" ]
+numberOfComputers=${#computers[*]};
+
+for (( i=0; i<$numberOfComputers; i++ )); do
+    getComputerValues ${computers[$i]}
+    if [ $computerName ];
     then
-        if (( "${computerValues[$1]}" == "${computername}" ));
+        if [ ${computerValues[0]} == $computerName ]
         then
-            for i in ${!computerValues[@]}; do
-                echo "element $i of Computer '${computerValues[$1]}' is ${computerValues[$i]} current Value of Computername : ${computername}"
+            for (( j=0; j<$numberOfOptions; j++)); do
+                computerArray[0,$j]=${computerValues[$j]}
             done
+            echo "Die IP von ${computerArray[0,0]} = ${computerArray[0,1]}"
         fi
     else
-        echo "${computerValues[*]}"
+        for (( j=0; j<$numberOfOptions; j++)); do
+            computerArray[$i,$j]=${computerValues[$j]}
+        done
+        echo "Die IP von ${computerArray[$i,0]} = ${computerArray[$i,1]} Paketverwaltung: ${computerArray[$i,4]}"
     fi
 done
 
+if [ ${#computerArray[*]} -eq $numberOfOptions ]
+# this means that only 1 computer is in the array (a valid name was provided)
+then
+    ip=${computerArray[0,1]}
+    port=${computerArray[0,2]}
+    userName=${computerArray[0,3]}
+    packageSystem=${computerArray[0,4]}
 
+    scp -P $port /home/martin/code/bash/projects/updates/localUpdate.sh "$ip":/home/"$userName"/localUpdate.sh
 
-
-
-
+    if [ $packageSystem == "apt" ]
+    # this means that only 1 computer is in the array (a valid name was provided)
+    then
+        ssh $userName@$ip -p $port -t 'bash -l -c "./localUpdate.sh apt;bash"'
+    elif [ $packageSystem == "paru" ]
+    then
+        ssh $userName@$ip -p $port -t 'bash -l -c "./localUpdate.sh paru;bash"'
+    fi
+fi
