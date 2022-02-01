@@ -27,7 +27,7 @@ getComputerValues () {
 runUpdate () {
     # function requires $ip,$port,$userName and $packageSystem to be set before running.
     echo "Running on $name with user $userName"
-    scp -P $port ./localUpdate.sh "$ip":/home/"$userName"/localUpdate.sh
+    scp -P $port ./localUpdate.sh "$userName"@"$ip":/home/"$userName"/localUpdate.sh
     if [ $packageSystem == "apt" ]
     then
         ssh $userName@$ip -p $port -t 'bash -l -c "./localUpdate.sh apt;bash"'
