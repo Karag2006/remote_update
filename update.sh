@@ -1,4 +1,16 @@
 #!/bin/bash
+# Remote update script for multiple Computers
+# Synopsis:
+#   update.sh [-n HostName]
+#
+# Requirements: 
+#  - ssh and scp access to the Host(s)
+#  - bash and the chosen Package Manager installed on the Host(s)
+#  - sudo priviledges on the Host(s) for the username provided in Computers.txt
+#  - localUpdate.sh present in the same folder as update.sh - Shell script to do the update work on the Host(s) - will be transfered with scp
+#  - Computers.txt present in the same folder as update.sh - List of Host(s) with their connection options
+
+
 
 # Constant values
 ComputerListFile='./Computers.txt'
@@ -12,13 +24,10 @@ getComputerValues () {
     # expects a string seperated by ',' as input
     IFS=',' read -r -a computerValues <<< "$1"
 }
-
 runUpdate () {
     # function requires $ip,$port,$userName and $packageSystem to be set before running.
+    echo "Running on $name with user $userName"
     scp -P $port ./localUpdate.sh "$ip":/home/"$userName"/localUpdate.sh
-
-    echo "Running on $name with user $userName:"
-
     if [ $packageSystem == "apt" ]
     then
         ssh $userName@$ip -p $port -t 'bash -l -c "./localUpdate.sh apt;bash"'
@@ -30,7 +39,7 @@ runUpdate () {
 
 # handle arguments
 # for now n == name is the only valid option
-# if option -n is provided the following argument should be the valid name of a PC from Computers
+# if option -n is provided the following argument should be the valid name of a PC from Computers.txt
 
 if [ -n "$1" ] 
 then
@@ -44,6 +53,7 @@ then
 fi
 
 declare -A computerArray
+# 2 dimensional array for all provided options for every Computer
 
 readComputerList
 
@@ -57,14 +67,12 @@ for (( i=0; i<$numberOfComputers; i++ )); do
         then
             for (( j=0; j<$numberOfOptions; j++)); do
                 computerArray[0,$j]=${computerValues[$j]}
-            done
-            echo "Die IP von ${computerArray[0,0]} = ${computerArray[0,1]}"
-        fi
+            done        
+            fi
     else
         for (( j=0; j<$numberOfOptions; j++)); do
             computerArray[$i,$j]=${computerValues[$j]}
         done
-        echo "Die IP von ${computerArray[$i,0]} = ${computerArray[$i,1]} Paketverwaltung: ${computerArray[$i,4]}"
     fi
 done
 
@@ -79,14 +87,15 @@ then
 
     runUpdate
 else
-    # app needs to run through the entire computer list.
+    # app needs to run through the entire computer list as no specific host was supplied.
+    # there are more then 1 Computers options saved in computerArray
     for (( i=0; i<$numberOfComputers; i++ )); do
         name=${computerArray[$i,0]}
         ip=${computerArray[$i,1]}
         port=${computerArray[$i,2]}
         userName=${computerArray[$i,3]}
-        packageSystem=${computerArray[$i,4]}
-
+        packageSystem=${computerArray[$i,4]} 
+    
         runUpdate
     done
 fi
